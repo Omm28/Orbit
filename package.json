@@ -8,7 +8,8 @@
     "start": "ts-node src/index.ts",
     "build": "tsc",
     "run:built": "node dist/index.js",
-    "eval": "ts-node tests/evals/evalsRunner.ts"
+    "eval": "ts-node tests/evals/evalsRunner.ts",
+    "test": "ts-node tests/unit/runUnits.ts"
   },
   "keywords": [
     "ai",
