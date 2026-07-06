@@ -121,6 +121,17 @@ export class Executor {
         result.snapshot = await this.pageManager.snapshot();
       }
 
+      // POST-ACTION GUARDRAIL: inspect resulting URL and page text for
+      // risky outcomes that slipped past the pre-action check (e.g. obfuscated buttons)
+      if (result.snapshot) {
+        const postSafety = Guardrails.checkPostAction(action, result.snapshot);
+        if (!postSafety.allowed) {
+          const msg = postSafety.reason ?? "Post-action safety check failed.";
+          logger.warn(`[Post-Action Guardrail] ${msg}`);
+          result.error = `Safety violation (post-action): ${msg}`;
+        }
+      }
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error(`Executor error: ${message}`);
