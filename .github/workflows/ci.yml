@@ -7,7 +7,11 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  # ── Job 1: Fast check on every push and PR ─────────────────────────────────
+  # Compiles TypeScript and runs the unit test suite.
+  # No API key required. No browser spawned. Completes in ~15s.
+  unit-tests:
+    name: Build & Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -28,3 +32,56 @@ jobs:
 
     - name: Run Unit Tests
       run: npm test
+
+  # ── Job 2: Full eval suite on push to main only ────────────────────────────
+  # Launches a real headless Chromium instance via Playwright and runs all
+  # 10 eval tasks against the Gemini API.
+  #
+  # Why not on PRs?
+  #   Each run costs Gemini API quota and takes ~3 minutes. Running on every
+  #   draft PR commit would burn quota unnecessarily. The unit-tests job
+  #   provides fast feedback on PRs; the eval suite validates the full agent
+  #   loop on merge to main.
+  #
+  # Setup required:
+  #   Add GEMINI_API_KEY to repo Settings → Secrets → Actions.
+  evals:
+    name: Eval Suite (Headless)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: unit-tests
+
+    env:
+      LLM_PROVIDER: gemini
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      HEADLESS: "true"
+      RECORD_VIDEO: "false"
+      MAX_STEPS: "12"
+      NON_INTERACTIVE: "true"
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Install Playwright Chromium
+      run: npx playwright install chromium --with-deps
+
+    - name: Run Eval Suite
+      run: npm run eval
+
+    - name: Upload Eval Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: evals-report
+        path: evals_report.md
+        retention-days: 30

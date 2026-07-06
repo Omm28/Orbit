@@ -35,3 +35,14 @@ Please maintain a respectful, collaborative, and professional environment in all
 * **TypeScript:** Strictly type your inputs, outputs, and classes. Avoid using `any` where possible.
 * **ASCII Layout Logs:** Ensure any command-line output matches the clean, emoji-free ASCII console style.
 * **Linting & Formatting:** Ensure your code is formatted consistently with the rest of the codebase.
+
+## CI Pipeline
+
+The repository uses GitHub Actions with two jobs:
+
+| Job | Trigger | What it does |
+|-----|---------|--------------|
+| **Build & Unit Tests** | Every push and PR | Compiles TypeScript, runs `npm test` (unit suite, no browser, no API key) |
+| **Eval Suite** | Push to `main` only | Launches headless Chromium, runs all 10 eval tasks via Gemini API |
+
+To run the eval suite in CI on your fork, add `GEMINI_API_KEY` to your repository secrets under **Settings → Secrets and variables → Actions**.
