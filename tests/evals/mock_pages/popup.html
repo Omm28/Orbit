@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Orbit – Product Catalog Launcher</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 40px 50px;
+      border-radius: 14px;
+      box-shadow: 0 6px 30px rgba(0,0,0,0.08);
+      text-align: center;
+      max-width: 480px;
+    }
+    h2 { margin-top: 0; color: #1a1a2e; }
+    p  { color: #555; line-height: 1.6; }
+    button {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #3730a3; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Product Store</h2>
+    <p>Browse our complete product catalog to find prices and availability.</p>
+    <button id="open-catalog-btn" onclick="openCatalog()">Open Product Catalog</button>
+  </div>
+
+  <script>
+    function openCatalog() {
+      window.open('table.html', '_blank');
+    }
+  </script>
+</body>
+</html>

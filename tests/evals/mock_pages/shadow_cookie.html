@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shadow DOM & Cookie Overlay Mock Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      margin: 0;
+      background: #f0f4f8;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    /* Modal Cookie Overlay */
+    #cookie-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .cookie-banner {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .cookie-banner button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    .cookie-banner button:hover {
+      background: #0056b3;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .success-msg {
+      color: green;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Blocking Cookie Overlay -->
+  <div id="cookie-overlay">
+    <div class="cookie-banner">
+      <h3>Cookie Preference Disclaimer</h3>
+      <p>We use cookies to optimize your experience. Press "Accept Cookies" to proceed.</p>
+      <button id="accept-cookies-btn" onclick="acceptCookies()">Accept Cookies</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Shadow DOM Secure Input</h2>
+    <p>Please enter the secret password below inside the shadow DOM capsule to finish:</p>
+    
+    <!-- Shadow Host element -->
+    <div id="shadow-host"></div>
+    
+    <div id="status" class="success-msg hidden">Success! Shadow DOM Input Filled and Submitted!</div>
+  </div>
+
+  <script>
+    function acceptCookies() {
+      document.getElementById('cookie-overlay').classList.add('hidden');
+    }
+
+    // Initialize Shadow DOM contents
+    const host = document.getElementById('shadow-host');
+    const shadow = host.attachShadow({ mode: 'open' });
+
+    // Styles for Shadow DOM
+    const style = document.createElement('style');
+    style.textContent = `
+      .shadow-input-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+      button {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      button:hover {
+        background: #218838;
+      }
+    `;
+    shadow.appendChild(style);
+
+    // HTML Structure inside Shadow DOM
+    const container = document.createElement('div');
+    container.className = 'shadow-input-container';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Enter shadow secret...';
+    input.id = 'shadow-secret-input';
+
+    const submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Submit Securely';
+    submitBtn.id = 'shadow-submit-btn';
+    submitBtn.onclick = () => {
+      if (input.value === 'orbit123') {
+        document.getElementById('status').classList.remove('hidden');
+      }
+    };
+
+    container.appendChild(input);
+    container.appendChild(submitBtn);
+    shadow.appendChild(container);
+  </script>
+</body>
+</html>

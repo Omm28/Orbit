@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mock Dropdown Selection</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; background: #fafafa; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 400px; margin: auto; }
+    select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-top: 10px; font-size: 16px; }
+    #msg { margin-top: 20px; font-weight: bold; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Select Country</h2>
+    <p>Please select your region below:</p>
+    <select id="country-select" onchange="showSelection()">
+      <option value="">-- Choose Country --</option>
+      <option value="US">United States</option>
+      <option value="CA">Canada</option>
+      <option value="UK">United Kingdom</option>
+    </select>
+    <div id="msg">No selection made yet.</div>
+  </div>
+
+  <script>
+    function showSelection() {
+      const select = document.getElementById("country-select");
+      const text = select.options[select.selectedIndex].text;
+      const msg = document.getElementById("msg");
+      if (select.value) {
+        msg.innerText = "Selected: " + text;
+        msg.style.color = "green";
+      } else {
+        msg.innerText = "No selection made yet.";
+        msg.style.color = "black";
+      }
+    }
+  </script>
+</body>
+</html>

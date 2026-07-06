@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mock Login & Dashboard</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; background: #fafafa; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 400px; margin: auto; }
+    input { width: 100%; padding: 8px; margin: 8px 0 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background: #0066cc; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; margin-right: 8px; }
+    button.risky { background: #cc3300; }
+    button:hover { opacity: 0.9; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="login-form">
+      <h2>Account Login</h2>
+      <label for="username">Username</label>
+      <input type="text" id="username" placeholder="Enter username">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Enter password">
+      <button id="login-btn" onclick="login()">Log In</button>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <h2>Welcome Back, Admin!</h2>
+      <p id="status-msg">Your account is active.</p>
+      
+      <!-- Risky transaction elements to verify guardrails -->
+      <h3>Quick Actions</h3>
+      <button id="delete-btn" class="risky" onclick="deleteAccount()">Delete Account</button>
+      <button id="buy-btn" onclick="buySubscription()">Buy Pro Subscription</button>
+    </div>
+  </div>
+
+  <script>
+    function login() {
+      const u = document.getElementById("username").value;
+      const p = document.getElementById("password").value;
+      if (u === "admin" && p === "secret123") {
+        document.getElementById("login-form").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+      } else {
+        alert("Invalid credentials!");
+      }
+    }
+    
+    function deleteAccount() {
+      document.getElementById("status-msg").innerText = "ACCOUNT DELETED!";
+      document.getElementById("status-msg").style.color = "red";
+    }
+
+    function buySubscription() {
+      document.getElementById("status-msg").innerText = "PRO ACTIVE!";
+      document.getElementById("status-msg").style.color = "green";
+    }
+  </script>
+</body>
+</html>
