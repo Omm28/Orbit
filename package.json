@@ -1,7 +1,7 @@
 {
   "name": "orbit",
   "version": "1.0.0",
-  "description": "AI browser agent powered by OpenAI and Playwright",
+  "description": "AI browser agent powered by Gemini and Playwright",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node --esm src/index.ts",
@@ -16,7 +16,7 @@
     "browser",
     "agent",
     "playwright",
-    "openai"
+    "gemini"
   ],
   "author": "",
   "license": "ISC",

@@ -256,9 +256,8 @@ async function runEvals() {
       report += `- **Error:** ${cleanErrorText(r.error)}\n`;
       if (r.name.includes("Nested IFrame")) {
         report += `- **Reason:** Orbit's PageManager traverses shadow roots and same-origin iframes independently. `;
-        report += `A blob-URL iframe embedded *inside* a shadow root creates a cross-origin context at runtime, `;
-        report += `preventing the shadow DOM scanner from reaching the iframe's document and injecting orbitId attributes. `;
-        report += `Fixing this would require switching from blob: URLs to same-origin srcdoc iframes in the mock page.\n`;
+        report += `The cross-frame click fallback in Click.ts searches child frames when an element is not found in the main document. `;
+        report += `If this task still fails, check whether the iframe is same-origin (srcdoc) rather than a cross-origin blob: URL.\n`;
       }
       if (r.name.includes("Mid-Form Interstitial")) {
         report += `- **Reason:** The mid-flow session verification dialog appears after navigating from step 1 to step 2. `;

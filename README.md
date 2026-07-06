@@ -3,7 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Automation-Playwright-green.svg)](https://playwright.dev/)
 [![Build & Unit Tests](https://github.com/Omm28/Orbit/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/Omm28/Orbit/actions/workflows/ci.yml)
-[![Evals](https://img.shields.io/badge/Evals-9%20%2F%2010%20Passed-yellow.svg)](evals_report.md)
+[![Evals](https://img.shields.io/badge/Evals-10%20%2F%2010%20Passed-brightgreen.svg)](evals_report.md)
 [![Model Fallback](https://img.shields.io/badge/LLM-Gemini%20%E2%86%92%20Ollama%20Fallback-orange.svg)]()
 
 Orbit is a **fully autonomous, self-healing AI browser agent** built in TypeScript. Give it a natural-language task (e.g. *"Log in, open the product catalog in a new tab, extract the price, and dismiss any cookie popups along the way"*), and Orbit will operate a real Chromium instance to achieve the goal.

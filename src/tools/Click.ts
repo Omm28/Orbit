@@ -13,7 +13,34 @@ export async function click(pageManager: PageManager, orbitId: number): Promise<
   
   try {
     // Keep timeout short so self-healing doesn't wait too long
-    await page.click(sel, { timeout: 6000 });
+    const mainCount = await page.locator(sel).count();
+
+    if (mainCount > 0) {
+      // Element is in the main frame — normal path
+      await page.click(sel, { timeout: 6000 });
+    } else {
+      // Element not found in main frame — search all child frames (e.g. srcdoc iframes,
+      // including those embedded inside shadow roots)
+      let clickedInFrame = false;
+      for (const frame of page.frames()) {
+        if (frame === page.mainFrame()) continue;
+        try {
+          const frameCount = await frame.locator(sel).count();
+          if (frameCount > 0) {
+            await frame.locator(sel).click({ timeout: 6000 });
+            clickedInFrame = true;
+            break;
+          }
+        } catch {
+          // this frame didn't have it — try the next one
+        }
+      }
+      if (!clickedInFrame) {
+        // Nothing found anywhere — let the standard Playwright timeout error surface
+        await page.click(sel, { timeout: 6000 });
+      }
+    }
+
     await page.waitForTimeout(500);
   } catch (err: any) {
     const errorMsg = err.message.toLowerCase();
