@@ -4,6 +4,7 @@
 
 import { testGuardrails } from "./guardrails.test";
 import { testTypes } from "./types.test";
+import { testCheckpointManager } from "./checkpoint.test";
 
 async function runAllUnits() {
   console.log("==================================================");
@@ -23,6 +24,13 @@ async function runAllUnits() {
     testTypes();
   } catch (err: any) {
     console.error("FAIL: Types Zod schema test failed:", err.message || err);
+    passed = false;
+  }
+
+  try {
+    await testCheckpointManager();
+  } catch (err: any) {
+    console.error("FAIL: CheckpointManager test failed:", err.message || err);
     passed = false;
   }
 
