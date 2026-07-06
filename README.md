@@ -1,13 +1,14 @@
-# Orbit — Production-Grade AI Browser Agent
+# Orbit — AI Browser Agent
 
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Automation-Playwright-green.svg)](https://playwright.dev/)
+[![Orbit CI](https://github.com/Omm28/Orbit/actions/workflows/ci.yml/badge.svg)](https://github.com/Omm28/Orbit/actions/workflows/ci.yml)
 [![Evals](https://img.shields.io/badge/Evals-7%20%2F%207%20Passed-brightgreen.svg)](evals_report.md)
 [![Model Fallback](https://img.shields.io/badge/LLM-Gemini%20%E2%86%92%20Ollama%20Fallback-orange.svg)]()
 
 Orbit is a **fully autonomous, self-healing AI browser agent** built in TypeScript. Give it a natural-language task (e.g. *"Log in, open the product catalog in a new tab, extract the price, and dismiss any cookie popups along the way"*), and Orbit will operate a real Chromium instance to achieve the goal.
 
-Unlike simple LLM-wrapper scripts, Orbit is architected with **fault tolerance, cost optimization, multi-tab awareness, and strict safety guardrails** suitable for production environments.
+Unlike simple LLM-wrapper scripts, Orbit is architected with production-level concerns in mind, including **fault tolerance, cost optimization, multi-tab awareness, and strict safety guardrails**.
 
 ---
 
@@ -135,3 +136,19 @@ This runs 7 custom test scenarios headlessly, records videos for each run, and g
 5. **Domain Safety Intercept:** Blocking navigation to unlisted domains.
 6. **Shadow DOM & Cookie Dismissal:** Accessing shadow root elements while programmatically closing a click-blocking cookie popup banner.
 7. **Multi-Tab Price Switcher:** Clicking a button to open a new tab, switching active focus to that tab, and reading prices.
+
+---
+
+## Adversarial Cases & Failure Modes
+
+Every autonomous agent has failure modes. To maintain engineering transparency, we document known challenges and architectural trade-offs:
+
+1. **Chronological Scrolling & First-Match Bias:**
+   * **Symptom:** In very long, chronologically ordered tables (such as Wikipedia's *List of Starlink launches* which exceeds 30,000 pixels in height), the agent may stop scrolling and prematurely report the oldest entries (e.g., from 2018) as the "most recent" because they appear first in its active viewport.
+   * **Root Cause:** To conserve LLM context window costs, Orbit only feeds the active viewport text to the planner. Reaching the bottom of massive lists using brute-force scrolling would exceed the maximum step limit (`MAX_STEPS=20`).
+   * **Mitigation:** Guide the agent to use table-of-contents navigation anchor links (e.g., clicking on "2026 launches" directly) which jumps to the bottom in a single step instead of scrolling.
+
+2. **Cost Estimation Drift:**
+   * **Symptom:** Cost and token metrics printed at the end of runs are calculated using character heuristics (1 token ≈ 4 characters).
+   * **Root Cause:** The actual API pricing fluctuates based on provider models and prompt caching states.
+   * **Mitigation:** These estimates are intended for developer awareness and are not directly integrated with live billing APIs.
