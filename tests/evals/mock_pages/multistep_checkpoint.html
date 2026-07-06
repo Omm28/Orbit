@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Adversarial: Multi-Step Form with Mid-Flow Blocker</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background: #f0f4f8; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); max-width: 480px; margin: 0 auto; }
+    h2 { margin-top: 0; color: #333; }
+    input { width: 100%; padding: 10px; margin: 8px 0 16px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+    button.primary { background: #4f46e5; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+    button.primary:hover { background: #3730a3; }
+    .step { display: none; }
+    .step.active { display: block; }
+    /* Mid-flow interstitial blocker */
+    #interstitial {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.65); display: flex; justify-content: center; align-items: center;
+      z-index: 9999; display: none;
+    }
+    .interstitial-box {
+      background: white; padding: 28px; border-radius: 10px; max-width: 380px; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .interstitial-box h3 { margin-top: 0; color: #dc2626; }
+    .interstitial-box button {
+      background: #16a34a; color: white; border: none; padding: 10px 22px;
+      border-radius: 6px; cursor: pointer; font-size: 15px; margin-top: 14px;
+    }
+    .success { color: #16a34a; font-weight: bold; font-size: 18px; margin-top: 12px; }
+    .progress { color: #888; font-size: 13px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- Mid-flow session warning blocker (fires on step 2) -->
+  <div id="interstitial">
+    <div class="interstitial-box">
+      <h3>Session Verification Required</h3>
+      <p>Before continuing, please confirm you wish to proceed with your account setup.</p>
+      <button id="confirm-session-btn" onclick="dismissInterstitial()">Continue Setup</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Account Setup — 3 Steps</h2>
+
+    <!-- Step 1: Name -->
+    <div id="step-1" class="step active">
+      <p class="progress">Step 1 of 3: Personal Details</p>
+      <label>Full Name</label>
+      <input id="name-input" type="text" placeholder="Enter your full name">
+      <button class="primary" id="step1-next" onclick="goToStep2()">Next</button>
+    </div>
+
+    <!-- Step 2: Email (blocked by interstitial on load) -->
+    <div id="step-2" class="step">
+      <p class="progress">Step 2 of 3: Contact Details</p>
+      <label>Email Address</label>
+      <input id="email-input" type="email" placeholder="Enter your email">
+      <button class="primary" id="step2-next" onclick="goToStep3()">Next</button>
+    </div>
+
+    <!-- Step 3: Confirmation -->
+    <div id="step-3" class="step">
+      <p class="progress">Step 3 of 3: Confirmation</p>
+      <p>All details received. Click below to complete setup.</p>
+      <button class="primary" id="step3-finish" onclick="finish()">Complete Setup</button>
+    </div>
+
+    <!-- Final success message -->
+    <div id="final-success" class="success" style="display:none;">
+      Account setup complete! Welcome aboard.
+    </div>
+  </div>
+
+  <script>
+    function goToStep2() {
+      const name = document.getElementById('name-input').value.trim();
+      if (!name) return;
+      document.getElementById('step-1').classList.remove('active');
+      document.getElementById('step-2').classList.add('active');
+      // Fire the mid-flow interstitial blocker
+      document.getElementById('interstitial').style.display = 'flex';
+    }
+
+    function dismissInterstitial() {
+      document.getElementById('interstitial').style.display = 'none';
+    }
+
+    function goToStep3() {
+      const email = document.getElementById('email-input').value.trim();
+      if (!email) return;
+      document.getElementById('step-2').classList.remove('active');
+      document.getElementById('step-3').classList.add('active');
+    }
+
+    function finish() {
+      document.getElementById('step-3').classList.remove('active');
+      document.getElementById('final-success').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

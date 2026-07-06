@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Adversarial: Nested IFrame in Shadow Root</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background: #f0f4f8; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); max-width: 520px; margin: 0 auto; }
+    h2 { margin-top: 0; color: #333; }
+    p { color: #555; }
+    #result-outer { margin-top: 16px; font-weight: bold; color: green; display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Nested IFrame in Shadow Root Test</h2>
+    <p>The interactive element is inside an iframe, which is itself inside a shadow root. Click the button inside to reveal the secret code.</p>
+    <!-- Shadow host: the iframe lives inside its shadow tree -->
+    <div id="shadow-host"></div>
+    <div id="result-outer"></div>
+  </div>
+
+  <script>
+    // Build the iframe content as a blob URL so it works under file:// protocol
+    const iframeContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { margin: 0; padding: 16px; font-family: Arial, sans-serif; background: #eef; }
+          button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+          }
+          button:hover { background: #3730a3; }
+          #msg { margin-top: 12px; color: #333; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <button id="iframe-btn" onclick="reveal()">Reveal Secret Code</button>
+        <div id="msg"></div>
+        <script>
+          function reveal() {
+            document.getElementById('msg').textContent = 'Secret: ORBIT-NESTED-42';
+            window.parent.postMessage('ORBIT-NESTED-42', '*');
+          }
+        <\/script>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([iframeContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Attach shadow root and insert iframe inside it
+    const host = document.getElementById('shadow-host');
+    const shadow = host.attachShadow({ mode: 'open' });
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .wrapper { border: 2px dashed #4f46e5; border-radius: 8px; padding: 8px; margin-top: 12px; }
+      iframe { width: 100%; height: 100px; border: none; border-radius: 4px; }
+    `;
+    shadow.appendChild(style);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'wrapper';
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'nested-iframe';
+    iframe.src = blobUrl;
+    wrapper.appendChild(iframe);
+    shadow.appendChild(wrapper);
+
+    // Listen for postMessage from iframe to confirm action completed
+    window.addEventListener('message', (e) => {
+      if (e.data === 'ORBIT-NESTED-42') {
+        const outer = document.getElementById('result-outer');
+        outer.textContent = 'Confirmed: Secret code received — ORBIT-NESTED-42';
+        outer.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
