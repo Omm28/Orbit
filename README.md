@@ -6,27 +6,78 @@
 [![Evals](https://img.shields.io/badge/Evals-9%20%2F%2010%20Passed-yellow.svg)](evals_report.md)
 [![Model Fallback](https://img.shields.io/badge/LLM-Gemini%20%E2%86%92%20Ollama%20Fallback-orange.svg)]()
 
-Orbit is a **fully autonomous, self-healing AI browser agent** built in TypeScript. Give it a natural-language task (e.g. *"Log in, open the product catalog in a new tab, extract the price, and dismiss any cookie popups along the way"*), and Orbit will operate a real Chromium instance to achieve the goal.
+Orbit is a TypeScript browser agent that separates **planning**, **page understanding**, and **execution** into independent components. Give it a natural-language task and it operates a real Chromium instance to achieve the goal — handling multi-tab navigation, shadow DOM traversal, popup dismissal, and mid-task recovery without manual intervention.
 
-Unlike simple LLM-wrapper scripts, Orbit is architected with production-level concerns in mind, including **fault tolerance, cost optimization, multi-tab awareness, and strict safety guardrails**.
-
----
-
-## Core Features
-
-*   **Action Bundling:** Minimizes API latency and LLM costs by executing multiple sequential inputs/clicks in a single turn without waiting for intermediate screenshots.
-*   **Multi-Tab Support:** Real-time awareness of all open browser tabs/popups. The agent can monitor open tabs and actively switch focus (`switchTab`) between them.
-*   **Self-Healing Clicks:** Catching click-interception errors (such as cookie banners or popups blocking target elements), dynamically scanning the page for overlay dismissers (e.g. Accept, Close, Reject, Dismiss), clicking them, and automatically retrying the original target click.
-*   **Shadow DOM & IFrame Traversal:** Recursively scans and maps interactive elements hidden deep inside shadow roots and nested same-origin iframe hierarchies, calculating absolute viewport coordinates compensating for iframe offsets.
-*   **LLM Failover Routing:** Operates with a dual-provider client (Gemini as the primary brain, automatically failing over to a local Ollama Llama 3.1 model if rate limits or network issues arise).
-*   **Browser Milestone Checkpointing:** Automatically serializes browser contexts (`storageState`, cookies, and localStorage) when subtasks are achieved, allowing the agent to roll back to the last known-good milestone if it hits consecutive failures.
-*   **Terminal Viewport Previews:** Generates scaled, text-based grid previews of the page viewport layout (`[orbitId:tag]`) in the console, providing developers with clear visual context directly in the logs.
-*   **Session Screen Recording:** Playwright-backed screen recordings are automatically captured, flushed, and saved as clean task-slugged `.webm` video files inside the `recordings/` folder for visual replays.
-*   **Cost & Token Tracking:** Computes estimated prompt/completion token usage, action success rates, self-healing occurrences, and USD cost calculations per run.
+```
+npm start -- "Go to wikipedia.org, search for 'JavaScript', and find its release year."
+```
 
 ---
 
-## Project Architecture
+## How It Works
+
+Most LLM browser agents hand the model a raw HTML dump or a screenshot and ask it to guess a CSS selector. Orbit takes a different approach.
+
+Before every step, `PageManager` walks the live DOM — including shadow roots and same-origin iframes — and stamps every interactive element with a sequential integer `data-orbit-id`. The LLM never sees raw HTML. It sees a compact, structured element list and references elements by their `orbitId`:
+
+```
+[0] <input>  placeholder="Search Wikipedia"  id="searchInput"  type="search"
+[1] <button>  text="Search"  id="searchButton"
+[2] <a>  text="JavaScript"  href="https://en.wikipedia.org/wiki/JavaScript"
+```
+
+This makes the agent's reasoning deterministic and eliminates selector hallucination entirely.
+
+---
+
+## Architecture
+
+```
+Natural Language Task
+        │
+        ▼
+  ┌─────────────┐
+  │   Planner   │  ← LLM (Gemini / Ollama fallback)
+  │  (Agent.ts) │    Breaks task into subtasks, decides next action
+  └──────┬──────┘
+         │  AgentAction  { action: "click", orbitId: 3 }
+         ▼
+  ┌─────────────┐
+  │  Guardrails │  ← Pre-action safety check (domain whitelist, risky keywords)
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  Executor   │  ← Dispatches to the right tool file
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────────────────────────────┐
+  │              Tools                  │
+  │  Click · Type · Navigate · Scroll   │
+  │  SwitchTab · Select · Upload · ...  │
+  └──────┬──────────────────────────────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  Playwright │  ← Real Chromium instance
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐     ┌──────────────────┐
+  │  PageManager│────▶│  Snapshot        │  orbitId-stamped element list
+  │             │     │  + viewport text │  fed back to Planner
+  └─────────────┘     └──────────────────┘
+         │
+         ▼
+  ┌──────────────────┐     ┌──────────────────┐
+  │  Guardrails      │     │  Checkpoint      │
+  │  (post-action)   │     │  Manager         │
+  │  URL + text scan │     │  Save / Restore  │
+  └──────────────────┘     └──────────────────┘
+```
+
+### Source Layout
 
 ```
 src/
@@ -64,47 +115,42 @@ src/
 
 ---
 
-## Setup & Execution
+## Key Features
 
-### 1. Install Dependencies
-```bash
-npm install
-npx playwright install chromium
-```
+*   **orbitId Element System:** Every interactive element on the page (including inside shadow roots and iframes) is assigned a sequential integer ID before each step. The LLM references elements by ID — no CSS selectors, no hallucinated XPaths.
+*   **Self-Healing Clicks:** If a click is intercepted by an overlay (cookie banner, modal), the agent scans for a dismisser (Accept, Close, Reject), clicks it, and automatically retries the original action.
+*   **Shadow DOM & IFrame Traversal:** Recursively scans shadow roots and nested same-origin iframe hierarchies, calculating absolute viewport coordinates compensating for iframe offsets.
+*   **Multi-Tab Awareness:** Real-time tracking of all open tabs. The agent can monitor and switch focus (`switchTab`) between them.
+*   **Browser Milestone Checkpointing:** Serializes `storageState`, cookies, and `localStorage` when a subtask completes. On consecutive failures, the agent rolls back to the last known-good state.
+*   **LLM Failover:** Gemini as primary; automatically fails over to a local Ollama (Llama 3.1) instance on rate limits or network errors.
+*   **Two-Layer Safety Guardrails:** Pre-action checks (domain whitelist + risky keyword scan on element text/aria-label) and post-action checks (resulting URL path + visible page text). The post-action layer catches obfuscated icon-only risky buttons.
+*   **Action Bundling:** Multiple sequential actions (e.g. type + press Enter) can be returned in a single LLM response and executed without an intermediate screenshot round-trip.
+*   **Terminal Viewport Preview:** Before each LLM call, a text-based grid of the current viewport layout is printed to the console for developer visibility.
+*   **Session Screen Recording:** Playwright-backed `.webm` recordings are automatically saved to `recordings/` with a task-slugged filename.
+*   **Cost & Token Tracking:** Per-run metrics card with token estimates, USD cost, step count, and self-healing tally.
 
-### 2. Configure Environment
-Create a `.env` file in the root directory:
-```env
-# LLM Configuration
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key_here
+---
 
-# Local Backup (Optional)
-OLLAMA_HOST=http://localhost:11434
+## Ecosystem Context
 
-# Execution Settings
-HEADLESS=true
-MAX_STEPS=12
-RECORD_VIDEO=true
-SCREENSHOTS_DIR=./screenshots
-VIDEO_DIR=./recordings
-```
+| Feature | Orbit | Browser Use | Stagehand |
+|---|---|---|---|
+| Language | TypeScript | Python | TypeScript |
+| Element referencing | Integer orbitId (DOM-injected) | CSS selectors / XPath | AI-generated selectors |
+| Shadow DOM support | ✅ Recursive scan | Partial | Partial |
+| Multi-tab | ✅ | ✅ | ❌ |
+| Safety guardrails | ✅ Pre + post-action | ❌ | ❌ |
+| Checkpointing / rollback | ✅ | ❌ | ❌ |
+| LLM failover | ✅ Gemini → Ollama | ✅ | ❌ |
+| Eval suite | ✅ 10 tasks, mock pages | ✅ | Partial |
 
-### 3. Run Interactively
-To prompt the agent for a task in the console:
-```bash
-npm start
-```
-Or run directly passing a task argument:
-```bash
-npm start -- "Go to wikipedia.org, search for 'JavaScript', and find its release year."
-```
+*Comparison is based on public documentation as of July 2026. Features evolve.*
 
 ---
 
 ## Run Metrics Card
 
-At the end of every run, Orbit prints a detailed cost and execution summary card:
+At the end of every run, Orbit prints a detailed cost and execution summary:
 
 ```text
 ---------------- Run Metrics ----------------
@@ -114,7 +160,7 @@ At the end of every run, Orbit prints a detailed cost and execution summary card
   Tokens (in / out)  : 3,065 / 351 (~3,416 total)
   Est. Cost (USD)    : $0.00034
   Self-Healing       : 0 overlay dismissal(s)
-  Recording          : C:\Users\ombko\Projects\Orbit\recordings\orbit_multi_step_signup.webm
+  Recording          : recordings/orbit_multi_step_signup.webm
 ------------------------------------------------
 ```
 
@@ -146,16 +192,60 @@ This runs 10 custom test scenarios headlessly against deterministic mock HTML pa
 
 ---
 
+## Setup & Execution
+
+### 1. Install Dependencies
+```bash
+npm install
+npx playwright install chromium
+```
+
+### 2. Configure Environment
+Create a `.env` file in the root directory:
+```env
+# LLM Configuration
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Local Backup (Optional)
+OLLAMA_HOST=http://localhost:11434
+
+# Execution Settings
+HEADLESS=true
+MAX_STEPS=12
+RECORD_VIDEO=true
+SCREENSHOTS_DIR=./screenshots
+VIDEO_DIR=./recordings
+```
+
+### 3. Run Interactively
+To prompt the agent for a task in the console:
+```bash
+npm start
+```
+Or pass a task directly as an argument:
+```bash
+npm start -- "Go to wikipedia.org, search for 'JavaScript', and find its release year."
+```
+
+### 4. Run Tests
+```bash
+npm test        # Unit tests (no API key needed, ~15s)
+npm run eval    # Full 10-task eval suite (requires GEMINI_API_KEY)
+```
+
+---
+
 ## Adversarial Cases & Failure Modes
 
-Every autonomous agent has failure modes. To maintain engineering transparency, we document known challenges and architectural trade-offs:
+Every autonomous agent has failure modes. Documented here for engineering transparency:
 
 1. **Chronological Scrolling & First-Match Bias:**
-   * **Symptom:** In very long, chronologically ordered tables (such as Wikipedia's *List of Starlink launches* which exceeds 30,000 pixels in height), the agent may stop scrolling and prematurely report the oldest entries (e.g., from 2018) as the "most recent" because they appear first in its active viewport.
-   * **Root Cause:** To conserve LLM context window costs, Orbit only feeds the active viewport text to the planner. Reaching the bottom of massive lists using brute-force scrolling would exceed the maximum step limit (`MAX_STEPS=20`).
-   * **Mitigation:** Guide the agent to use table-of-contents navigation anchor links (e.g., clicking on "2026 launches" directly) which jumps to the bottom in a single step instead of scrolling.
+   * **Symptom:** In very long, chronologically ordered tables (e.g. Wikipedia's *List of Starlink launches*, 30,000+ px), the agent may stop scrolling and report the oldest entries as "most recent" because they appear first in the active viewport.
+   * **Root Cause:** Orbit feeds only the active viewport text to the planner to control LLM context costs. Brute-force scrolling through massive lists would exceed `MAX_STEPS`.
+   * **Mitigation:** Guide the agent to use table-of-contents anchor links (e.g. clicking "2026 launches") to jump directly to the target section.
 
 2. **Cost Estimation Drift:**
-   * **Symptom:** Cost and token metrics printed at the end of runs are calculated using character heuristics (1 token ≈ 4 characters).
-   * **Root Cause:** The actual API pricing fluctuates based on provider models and prompt caching states.
-   * **Mitigation:** These estimates are intended for developer awareness and are not directly integrated with live billing APIs.
+   * **Symptom:** Token and cost metrics use character heuristics (1 token ≈ 4 chars).
+   * **Root Cause:** Actual API pricing varies by model version and prompt caching state.
+   * **Mitigation:** Estimates are for developer awareness only and are not integrated with live billing APIs.
