@@ -3,7 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Automation-Playwright-green.svg)](https://playwright.dev/)
 [![Build & Unit Tests](https://github.com/Omm28/Orbit/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/Omm28/Orbit/actions/workflows/ci.yml)
-[![Evals](https://img.shields.io/badge/Evals-9%20%2F%2010%20Passed-yellow.svg)](evals_report.md)
+[![Evals](https://img.shields.io/badge/Evals-10%20%2F%2010%20Passed-brightgreen.svg)](evals_report.md)
 [![Model Fallback](https://img.shields.io/badge/LLM-Gemini%20%E2%86%92%20Ollama%20Fallback-orange.svg)]()
 
 Orbit is a TypeScript browser agent that separates **planning**, **page understanding**, and **execution** into independent components. Give it a natural-language task and it operates a real Chromium instance to achieve the goal — handling multi-tab navigation, shadow DOM traversal, popup dismissal, and mid-task recovery without manual intervention.
@@ -186,7 +186,7 @@ This runs 10 custom test scenarios headlessly against deterministic mock HTML pa
 7. **Multi-Tab Price Switcher:** Opening a new tab, switching active focus, and reading prices.
 
 **Adversarial Evals:**
-8. **Nested IFrame in Shadow Root** *(FAIL — documented)*: A blob-URL iframe embedded inside a shadow root creates a cross-origin context at runtime, preventing `orbitId` injection. This is a browser platform constraint, not a regression — see [evals_report.md](evals_report.md) for the full diagnosis.
+8. **Nested IFrame in Shadow Root** *(previously failing — resolved)*: A blob-URL iframe inside a shadow root was cross-origin, blocking `orbitId` injection. Fixed by switching to a `srcdoc` iframe (same-origin) and adding a child-frame fallback in `Click.ts` to dispatch clicks across Playwright frame boundaries. See [evals_report.md](evals_report.md) for the full two-layer diagnosis.
 9. **Mid-Form Interstitial with Checkpoint:** Agent saves a browser checkpoint mid-task and resumes correctly after an injected interstitial page.
 10. **Obfuscated Risky Action (Post-Action Guardrail):** An icon-only button (no readable text or aria-label) triggers a risky navigation; the post-action guardrail catches it by inspecting the resulting URL.
 

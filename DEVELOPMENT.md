@@ -64,7 +64,25 @@ This is an honest engineering log of the hardest bugs encountered while building
 
 ---
 
+## 6. Cross-Origin Iframe in Shadow Root — Two-Layer Traversal Failure
+
+**Symptom:** The adversarial eval task "Nested IFrame in Shadow Root" consistently hit the 12-step limit without the agent ever finding or clicking the target button. The agent could see the page, see the shadow host element, but the interactive button inside the iframe never appeared in the element list.
+
+**Root cause (layer 1 — perception):** `PageManager.collectElements` traverses shadow roots correctly: when it recurses into a shadow root, it calls `root.querySelectorAll('iframe')` on that shadow root and attempts to access `iframe.contentDocument`. The original mock page used a `blob:` URL to create the iframe — `new Blob([iframeContent], {type: 'text/html'})`. A `blob:` URL is treated as a separate origin by the browser, so accessing `iframe.contentDocument` threw a cross-origin security exception. The catch block silently swallowed it. Result: the button inside the iframe was never scanned, never got an `orbitId`, and was invisible to the agent.
+
+**Root cause (layer 2 — execution):** Even after fixing the perception layer, there was a second independent problem: `page.click(sel)` and `page.locator(sel)` only search the **main frame**. Playwright does not automatically descend into child frames when resolving locators on a `Page` object. So even if the button had been given an orbitId, the `click()` call would have found zero matches and failed — for a completely different reason than the cross-origin block.
+
+**Fix — layer 1:** Changed the mock page (`nested_iframe_shadow.html`) to use `iframe.srcdoc = iframeContent` instead of a `blob:` URL. `srcdoc` iframes are same-origin by specification. With same-origin access restored, `iframe.contentDocument` is accessible, `collectElements` recurses into it, and the button inside gets an orbitId assigned correctly.
+
+**Fix — layer 2:** Added a child-frame fallback in `Click.ts`. Before invoking the self-healing path, the click handler now checks whether the element was found in the main frame (`page.locator(sel).count()`). If the count is zero, it iterates `page.frames()`, checks each child frame with `frame.locator(sel).count()`, and dispatches the click through the correct `Frame` object. This is what actually fires the click — `page.click()` alone would have failed even with a valid orbitId, because Playwright's page-level click API doesn't cross frame boundaries.
+
+**Why both were necessary:** Fix 1 alone (srcdoc) would have assigned an orbitId to the button, but the click would have silently failed — zero element count in the main frame, falling through to the timeout error. Fix 2 alone (frame iteration) would have iterated frames and found zero elements anyway, because the button still had no orbitId. The two failures were independent and masked each other — fixing one without the other would have produced a different error message but still failed the eval.
+
+**Lesson:** Layered systems fail in layered ways. The perception layer (PageManager) and the execution layer (Click) each had their own scope assumptions — PageManager assumed cross-origin access would succeed, Click assumed all elements live in the main frame. Neither assumption was wrong for the 99% case, but together they created a compound failure that looked like a single problem. The diagnostic path was: confirm the element is actually scannable (add logging to `collectElements`), then confirm the click dispatch is actually reaching the right frame (check `page.frames()` at click time). Fixing the second layer revealed the first, and fixing the first revealed the second.
+
+---
+
 ## What I'd Still Improve
 
-- Guardrails only inspect elements *before* an action — an obfuscated risky action (icon-only button, no keyword in text/aria-label) would currently slip through. Post-action state verification is the next planned safety improvement.
-- These bugs were found through manual + eval-driven testing, not unit tests in isolation. Guardrails, Zod validation, and checkpoint restore logic don't yet have dedicated unit tests.
+- `collectElements` in `PageManager` does a full DOM walk on every snapshot — for pages with very deep shadow hierarchies this could get expensive. A smarter approach would be to cache the element tree and diff it incrementally.
+- Cost estimation uses character heuristics (1 token ≈ 4 chars) rather than the actual tokenizer. Integrating `tiktoken` or the model's own token count API would give accurate per-run billing figures.
