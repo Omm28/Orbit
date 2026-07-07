@@ -3,7 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue.svg)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Automation-Playwright-green.svg)](https://playwright.dev/)
 [![Build & Unit Tests](https://github.com/Omm28/Orbit/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/Omm28/Orbit/actions/workflows/ci.yml)
-[![Evals](https://img.shields.io/badge/Evals-10%20%2F%2010%20Passed-brightgreen.svg)](evals_report.md)
+[![Evals](https://img.shields.io/badge/Evals-9%20%2F%2010%20Passed-yellow.svg)](evals_report.md)
 [![Model Fallback](https://img.shields.io/badge/LLM-Gemini%20%E2%86%92%20Ollama%20Fallback-orange.svg)]()
 
 Orbit is a **fully autonomous, self-healing AI browser agent** built in TypeScript. Give it a natural-language task (e.g. *"Log in, open the product catalog in a new tab, extract the price, and dismiss any cookie popups along the way"*), and Orbit will operate a real Chromium instance to achieve the goal.
@@ -120,7 +120,7 @@ At the end of every run, Orbit prints a detailed cost and execution summary card
 
 ---
 
-## 7-Task Benchmarking Suite
+## 10-Task Benchmarking Suite
 
 Orbit includes an automated integration testing suite. Run the suite to verify all agent systems:
 
@@ -128,14 +128,21 @@ Orbit includes an automated integration testing suite. Run the suite to verify a
 npm run eval
 ```
 
-This runs 7 custom test scenarios headlessly, records videos for each run, and generates an [evals_report.md](evals_report.md) report detailing:
+This runs 10 custom test scenarios headlessly against deterministic mock HTML pages (no dependency on live websites), records `.webm` videos for each run, and generates an [evals_report.md](evals_report.md). **9 of 10 pass.** The one known failure is a documented platform-level limitation, not a regression — see below.
+
+**Standard Evals:**
 1. **Multi-Step Signup Flow:** Form submission across sequential pages.
-2. **Safety Guardrail Block:** Automatic transaction blocks (matched keyword: "delete account").
-3. **Data Extraction:** Laptop price lookup from a data table.
+2. **Safety Guardrail Block:** Automatic transaction block (matched keyword: "delete account").
+3. **Data Extraction:** Laptop price lookup from a product table.
 4. **Dropdown Selection:** Option selection from a custom HTML dropdown.
-5. **Domain Safety Intercept:** Blocking navigation to unlisted domains.
-6. **Shadow DOM & Cookie Dismissal:** Accessing shadow root elements while programmatically closing a click-blocking cookie popup banner.
-7. **Multi-Tab Price Switcher:** Clicking a button to open a new tab, switching active focus to that tab, and reading prices.
+5. **Domain Safety Intercept:** Blocking navigation to an un-whitelisted domain.
+6. **Shadow DOM & Cookie Dismissal:** Reaching shadow root elements while self-healing through a click-blocking cookie popup banner.
+7. **Multi-Tab Price Switcher:** Opening a new tab, switching active focus, and reading prices.
+
+**Adversarial Evals:**
+8. **Nested IFrame in Shadow Root** *(FAIL — documented)*: A blob-URL iframe embedded inside a shadow root creates a cross-origin context at runtime, preventing `orbitId` injection. This is a browser platform constraint, not a regression — see [evals_report.md](evals_report.md) for the full diagnosis.
+9. **Mid-Form Interstitial with Checkpoint:** Agent saves a browser checkpoint mid-task and resumes correctly after an injected interstitial page.
+10. **Obfuscated Risky Action (Post-Action Guardrail):** An icon-only button (no readable text or aria-label) triggers a risky navigation; the post-action guardrail catches it by inspecting the resulting URL.
 
 ---
 
